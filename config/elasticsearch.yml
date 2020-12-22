@@ -1,0 +1,3 @@
+# NOTE: move this file to directory $(ES_HOME)/config
+network.host: 127.0.0.1
+http.port: 9200

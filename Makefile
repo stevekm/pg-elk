@@ -10,10 +10,15 @@ export PATH:=$(CURDIR):$(CURDIR)/conda/bin:$(PATH)
 unexport PYTHONPATH
 unexport PYTHONHOME
 
+# https://www.elastic.co/blog/how-to-keep-elasticsearch-synchronized-with-a-relational-database-using-logstash
+# https://www.elastic.co/guide/en/logstash/current/advanced-pipeline.html
 # https://www.elastic.co/elastic-stack
 # https://medium.com/@emreceylan/how-to-sync-postgresql-data-to-elasticsearch-572af15845ad
 
 # ~~~~~ Installation of dependencies for running MinIO, CWL workflow ~~~~~ #
+PG_JDBC_JAR:=postgresql-42.2.18.jar
+PG_JDBC_URL:=https://jdbc.postgresql.org/download/$(PG_JDBC_JAR)
+
 # versions for Mac or Linux
 ifeq ($(UNAME), Darwin)
 CONDASH:=Miniconda3-4.7.12.1-MacOSX-x86_64.sh
@@ -39,7 +44,7 @@ endif
 
 YQ_URL:=https://github.com/mikefarah/yq/releases/download/4.0.0/$(YQ_BIN)
 FB_URL:=https://artifacts.elastic.co/downloads/beats/filebeat/$(FB_GZ)
-ES_URL:=https://artifacts.elastic.co/downloads/elasticsearch/$(ES_GZ)
+ES_BIN_URL:=https://artifacts.elastic.co/downloads/elasticsearch/$(ES_GZ)
 KIBANA_URL:=https://artifacts.elastic.co/downloads/kibana/$(KIBANA_GZ)
 LS_URL:=https://artifacts.elastic.co/downloads/logstash/$(LS_GZ)
 
@@ -62,8 +67,10 @@ conda:
 	bash "$(CONDASH)" -b -p conda && \
 	rm -f "$(CONDASH)"
 
-$(ES_HOME):
-	wget "$(ES_URL)" && \
+$(ES_GZ):
+	wget "$(ES_BIN_URL)"
+
+$(ES_HOME): $(ES_GZ)
 	tar -xzf $(ES_GZ)
 
 $(KIBANA_HOME):
@@ -96,7 +103,7 @@ export PGTABLE:=data
 # if PGUSER is not current username then need to initialize pg server user separately
 export PGUSER=$(USERNAME)
 # default password to use
-# export PGPASSWORD=admin
+export PGPASSWORD=admin
 export PGHOST=$(HOST)
 export PGLOG=$(LOGDIR)/postgres.log
 export PGPORT=9011
@@ -148,15 +155,23 @@ pg-import:
 
 
 # ~~~~~ ElasticSearch setup ~~~~~ #
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
+# https://stackoverflow.com/questions/14379575/configure-port-number-of-elasticsearch
 export ES_PORT:=9200
 export ES_HOST:=$(HOST)
 export ES_URL:=http://$(ES_HOST):$(ES_PORT)
 export ES_DATA:=$(CURDIR)/es_data
 export ES_PIDFILE:=$(LOGDIR)/elasticsearch.pid
 export ES_INDEX:=pg_data
+export ES_PATH_CONF:=$(ES_HOME)/config
+export ES_CONFIG_FILE:=$(CONFIGDIR)/elasticsearch.yml
 
 $(ES_DATA):
 	mkdir -p "$(ES_DATA)"
+
+# copy the custom settings over
+es-config:
+	/bin/cp "$(ES_CONFIG_FILE)" "$(ES_PATH_CONF)/"
 
 # ElasticSearch download, installation, and dir setup
 es: $(ES_HOME) $(ES_DATA) $(LOGDIR)
@@ -166,7 +181,10 @@ es-start: es
 	$(ES_HOME)/bin/elasticsearch \
 	-E "path.data=$(ES_DATA)" \
 	-E "path.logs=$(LOGDIR)" \
-	-d -p "$(ES_PIDFILE)"
+	-d -p "$(ES_PIDFILE)" \
+	-E "http.port=$(ES_PORT)" \
+	-E "network.host=$(ES_HOST)"
+
 
 # stop ElasticSearch daemon
 es-stop:
@@ -180,9 +198,14 @@ es-check:
 es-count:
 	curl  "$(ES_URL)/$(ES_INDEX)/_search?pretty=true"
 
+es-index:
+	curl '$(ES_URL)/_cat/indices?v'
 
+es-cluster:
+	curl -XGET '$(ES_URL)/_cluster/state?pretty'
 
 # ~~~~~ Kibana setup ~~~~~ #
+# https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-installation-configuration.html#view-data
 export KIBANA_HOST:=$(HOST)
 export KIBANA_PORT:=5602
 export KIBANA_LOG:=$(LOGDIR)/kibana.log
@@ -197,25 +220,40 @@ kib-start: $(KIBANA_HOME) $(LOGDIR)
 
 # ~~~~~ Logstash setup ~~~~~ #
 # https://www.elastic.co/guide/en/logstash/current/getting-started-with-logstash.html
+# https://www.elastic.co/guide/en/logstash/current/pipeline.html
 # https://www.elastic.co/guide/en/logstash/current/configuration.html
+# https://www.elastic.co/guide/en/logstash/current/environment-variables.html
+# https://www.elastic.co/guide/en/logstash/current/plugins-inputs-jdbc.html
 # Successfully started Logstash API endpoint {:port=>9600}
 LS_CONF:=$(CONFIGDIR)/logstash.conf
 LS_HOST:=$(HOST)
-LS_PORT:=5044
+LS_PORT:=9600
+LS_FB_PORT:=5044
 LS_DATA:=$(CURDIR)/ls_data
+LS_PS_JDBC:=$(LS_HOME)/logstash-core/lib/jars/$(PG_JDBC_JAR)
 # --path.settings ; Directory containing logstash.yml file:
-export LS_SETTINGS_DIR:=$(LS_HOME)/config
+# export LS_SETTINGS_DIR:=$(LS_HOME)/config
 
 $(LS_DATA):
 	mkdir -p "$(LS_DATA)"
 
-ls-start: $(LS_HOME) $(LS_DATA)
+$(PG_JDBC_JAR):
+	wget "$(PG_JDBC_URL)"
+
+$(LS_PS_JDBC): $(PG_JDBC_JAR)
+	cp $(PG_JDBC_JAR) $(LS_PS_JDBC)
+
+ls-setup: $(LS_HOME) $(LS_PS_JDBC)
+	# logstash-plugin install logstash-input-jdbc
+
+ls-start: $(LS_HOME) $(LS_DATA) $(LS_PS_JDBC)
 	logstash \
 	-f "$(LS_CONF)" \
 	--path.data "$(LS_DATA)" \
 	--path.logs "$(LOGDIR)" \
 	--http.host "$(LS_HOST)" \
-	--http.port "$(LS_PORT)"
+	--http.port "$(LS_PORT)" \
+	--config.reload.automatic
 
 
 
@@ -223,9 +261,18 @@ ls-start: $(LS_HOME) $(LS_DATA)
 # ~~~~~ Filebeat setup ~~~~~ #
 FB_HOST:=$(HOST)
 FB_CONFIG:=$(CONFIGDIR)/filebeat.yml
+FB_DATA:=$(CURDIR)/fb_data
 # FB_PORT:=
 # https://www.elastic.co/guide/en/beats/filebeat/7.10/filebeat-installation-configuration.html
 
 $(FB_CONFIG): $(CONFIGDIR)
-	jq -n --arg logdir "$(CURDIR)/logs" '{"filebeat.inputs": [{"type":"log", "enabled":true, "paths":[$$logdir]}], "output.logstash": { "hosts": ["$(LS_HOST):$(LS_PORT)"] } }' | yq eval '.. style=""' - > "$(FB_CONFIG)"
+	jq -n --arg logdir "$(CURDIR)/logs" '{"filebeat.inputs": [{"type":"log", "enabled":true, "paths":[$$logdir]}], "output.logstash": { "hosts": ["$(LS_HOST):$(LS_FB_PORT)"] } }' | yq eval '.. style=""' - > "$(FB_CONFIG)"
 fb-config: $(FB_CONFIG)
+
+$(FB_DATA):
+	mkdir -p "$(FB_DATA)"
+
+fb-start: $(FB_DATA)
+	filebeat -e -c "$(FB_CONFIG)" -d "publish" \
+	--path.data "$(FB_DATA)" \
+	--path.logs "$(LOGDIR)"
