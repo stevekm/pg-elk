@@ -150,9 +150,20 @@ pg-show:
 
 # add 5 new rows to the db
 pg-import:
-	echo "INSERT INTO $(PGTABLE)(value, word) VALUES ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)')" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
+	echo "INSERT INTO $(PGTABLE)(coverage, sampleid, tissue, type) VALUES \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'), \
+	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'); \
+	" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
 
-
+pg-drop:
+	echo "DROP TABLE $(PGTABLE)" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
 
 # ~~~~~ ElasticSearch setup ~~~~~ #
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
@@ -204,8 +215,14 @@ es-index:
 es-cluster:
 	curl -XGET '$(ES_URL)/_cluster/state?pretty'
 
+INDEX:=$(ES_INDEX)
+es-drop:
+	curl -X DELETE "$(ES_URL)/$(INDEX)?pretty"
+
+
 # ~~~~~ Kibana setup ~~~~~ #
 # https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-installation-configuration.html#view-data
+# https://www.elastic.co/guide/en/kibana/current/index-patterns.html
 export KIBANA_HOST:=$(HOST)
 export KIBANA_PORT:=5602
 export KIBANA_LOG:=$(LOGDIR)/kibana.log
@@ -224,6 +241,7 @@ kib-start: $(KIBANA_HOME) $(LOGDIR)
 # https://www.elastic.co/guide/en/logstash/current/configuration.html
 # https://www.elastic.co/guide/en/logstash/current/environment-variables.html
 # https://www.elastic.co/guide/en/logstash/current/plugins-inputs-jdbc.html
+# https://www.elastic.co/guide/en/logstash/current/event-dependent-configuration.html
 # Successfully started Logstash API endpoint {:port=>9600}
 LS_CONF:=$(CONFIGDIR)/logstash.conf
 LS_HOST:=$(HOST)

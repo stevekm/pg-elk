@@ -1,5 +1,8 @@
 CREATE TABLE data (
    id serial,
-   value int,
-   word text
+   coverage int,
+   sampleid text,
+   tissue text,
+   type text,
+   created timestamp default current_timestamp
 );
