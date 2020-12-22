@@ -146,3 +146,15 @@ es-check:
 # get the entries in the ElasticSearch index
 es-count:
 	curl  "$(ES_URL)/$(ES_INDEX)/_search?pretty=true"
+
+
+# ~~~~~ Kibana setup ~~~~~ #
+export KIBANA_HOST:=$(IP)
+export KIBANA_PORT:=5602
+export KIBANA_LOG:=$(LOGDIR)/kibana.log
+kib-start: $(KIBANA_HOME) $(LOGDIR)
+	$(KIBANA_HOME)/bin/kibana \
+	-e "$(ES_URL)" \
+	--port "$(KIBANA_PORT)" \
+	--host "$(KIBANA_HOST)" \
+	--log-file "$(KIBANA_LOG)"
