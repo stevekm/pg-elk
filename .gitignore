@@ -7,3 +7,10 @@ kibana-7.10.1-darwin-x86_64.tar.gz
 kibana-7.10.1-darwin-x86_64/
 logs/
 es_data/
+logstash-7.10.1/
+logstash-7.10.1-darwin-x86_64.tar.gz
+filebeat-7.10.1-darwin-x86_64.tar.gz
+filebeat-7.10.1-darwin-x86_64/
+yq
+yq_darwin_amd64
+ls_data/
