@@ -3,6 +3,7 @@ UNAME:=$(shell uname)
 USERNAME:=$(shell whoami)
 IP:=127.0.0.1
 .ONESHELL:
+export LOGDIR:=$(CURDIR)/logs
 export PATH:=$(CURDIR):$(CURDIR)/conda/bin:$(PATH)
 unexport PYTHONPATH
 unexport PYTHONHOME
@@ -44,8 +45,12 @@ $(KIBANA_HOME):
 	wget "$(KIBANA_URL)" && \
 	tar -xzf $(KIBANA_GZ)
 
-install: conda $(ES_HOME) $(KIBANA_HOME)
+$(LOGDIR):
+	mkdir -p "$(LOGDIR)"
+
+install: conda $(ES_HOME) $(KIBANA_HOME) $(LOGDIR)
 	conda install -y anaconda::postgresql=12.2
+
 
 
 # ~~~~~ Postgres Setup ~~~~~ #
@@ -60,7 +65,7 @@ export PGUSER=$(USERNAME)
 # default password to use
 # export PGPASSWORD=admin
 export PGHOST=$(IP)
-export PGLOG=postgres.log
+export PGLOG=$(LOGDIR)/postgres.log
 export PGPORT=9011
 
 # directory to hold the Postgres database files
@@ -106,3 +111,38 @@ pg-show:
 # add 5 new rows to the db
 pg-import:
 	echo "INSERT INTO $(PGTABLE)(value, word) VALUES ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)'), ($$RANDOM, '$$(shuf -n1 /usr/share/dict/words)')" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
+
+
+
+# ~~~~~ ElasticSearch setup ~~~~~ #
+export ES_PORT:=9200
+export ES_HOST:=$(IP)
+export ES_URL:=http://$(ES_HOST):$(ES_PORT)
+export ES_DATA:=$(CURDIR)/es_data
+export ES_PIDFILE:=$(LOGDIR)/elasticsearch.pid
+export ES_INDEX:=pg_data
+
+$(ES_DATA):
+	mkdir -p "$(ES_DATA)"
+
+# ElasticSearch download, installation, and dir setup
+es: $(ES_HOME) $(ES_DATA) $(LOGDIR)
+
+# start the ElasticSearch server in daemon mode
+es-start: es
+	$(ES_HOME)/bin/elasticsearch \
+	-E "path.data=$(ES_DATA)" \
+	-E "path.logs=$(LOGDIR)" \
+	-d -p "$(ES_PIDFILE)"
+
+# stop ElasticSearch daemon
+es-stop:
+	pkill -F "$(ES_PIDFILE)"
+
+# check if ElasticSearch is running
+es-check:
+	curl -X GET "$(ES_URL)/?pretty"
+
+# get the entries in the ElasticSearch index
+es-count:
+	curl  "$(ES_URL)/$(ES_INDEX)/_search?pretty=true"

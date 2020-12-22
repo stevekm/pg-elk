@@ -5,3 +5,5 @@ elasticsearch-7.10.1-darwin-x86_64.tar.gz
 elasticsearch-7.10.1/
 kibana-7.10.1-darwin-x86_64.tar.gz
 kibana-7.10.1-darwin-x86_64/
+logs/
+es_data/
