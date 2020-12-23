@@ -320,7 +320,7 @@ FB_CONFIG:=$(CONFIGDIR)/filebeat.yml
 FB_DATA:=$(CURDIR)/fb_data
 # FB_PORT:=
 # https://www.elastic.co/guide/en/beats/filebeat/7.10/filebeat-installation-configuration.html
-
+# wget https://download.elastic.co/demos/logstash/gettingstarted/logstash-tutorial.log.gz
 $(FB_CONFIG): $(CONFIGDIR)
 	jq -n --arg logdir "$(CURDIR)/logs" '{"filebeat.inputs": [{"type":"log", "enabled":true, "paths":[$$logdir]}], "output.logstash": { "hosts": ["$(LS_HOST):$(LS_FB_PORT)"] } }' | yq eval '.. style=""' - > "$(FB_CONFIG)"
 fb-config: $(FB_CONFIG)
