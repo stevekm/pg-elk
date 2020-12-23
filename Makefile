@@ -228,7 +228,7 @@ es-drop:
 	curl -X DELETE "$(ES_URL)/$(INDEX)?pretty"
 
 
-# query example
+# query examples
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html
 # https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html
 SAMPLE:=Sample1
@@ -245,6 +245,7 @@ es-query2:
 	-H 'Content-Type: application/json' \
 	-d'{ "query": { "range": { "coverage": {"gte": $(COV_MIN), "lte": $(COV_MAX)} } } }'
 
+# https://kb.objectrocket.com/elasticsearch/how-to-query-with-multiple-criteria-in-elasticsearch
 es-query3:
 	curl -X GET "$(ES_URL)/$(ES_INDEX)/_search?pretty=true" \
 	-H 'Content-Type: application/json' \
