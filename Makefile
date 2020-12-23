@@ -10,6 +10,13 @@ export PATH:=$(CURDIR):$(CURDIR)/conda/bin:$(PATH)
 unexport PYTHONPATH
 unexport PYTHONHOME
 
+define help
+endef
+export help
+help:
+	@printf "$$help"
+.PHONY: help
+
 # https://www.elastic.co/blog/how-to-keep-elasticsearch-synchronized-with-a-relational-database-using-logstash
 # https://www.elastic.co/guide/en/logstash/current/advanced-pipeline.html
 # https://www.elastic.co/elastic-stack
@@ -84,10 +91,10 @@ $(LS_HOME):
 $(LOGDIR):
 	mkdir -p "$(LOGDIR)"
 
-install: yq conda $(ES_HOME) $(KIBANA_HOME) $(LOGDIR)
+install: conda $(ES_HOME) $(KIBANA_HOME) $(LOGDIR)
 	conda install -y \
-	anaconda::postgresql=12.2 \
-	conda-forge::jq
+	anaconda::postgresql=12.2
+# conda-forge::jq
 
 # interactive shell with environment populated
 bash:
