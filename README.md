@@ -129,7 +129,9 @@ make kib-start
 
 Open your web browser to http://localhost:5602
 
-Go to Management > Stack Management > Index Patterns > Create Index Pattern > add a pattern for "pg_data"
+Go to Management > Stack Management > Index Patterns > Create Index Pattern > add a pattern for "pg_data", the index created for the imported PostgreSQL entries.
+
+![index](images/Screen Shot 2020-12-23 at 2.56.48 PM.png)
 
 Then you can go to Visualize > Create New Visualization to start making visualizations on the data in the "pg_data" index
 
