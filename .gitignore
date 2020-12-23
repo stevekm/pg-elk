@@ -17,3 +17,4 @@ ls_data/
 postgresql-42.2.18.jar
 data/
 fb_data/
+.logstash_jdbc_last_run
