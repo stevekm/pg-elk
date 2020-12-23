@@ -97,7 +97,7 @@ export LS_HOME:=$(CURDIR)/logstash-7.10.1
 
 export PATH:=$(FB_HOME):$(LS_HOME)/bin:$(ES_HOME)/bin:$(PATH)
 
-
+# not used in this demo but useful;
 $(YQ_BIN):
 	wget "$(YQ_URL)" && chmod +x $(YQ_BIN)
 
@@ -128,10 +128,9 @@ $(LS_HOME):
 $(LOGDIR):
 	mkdir -p "$(LOGDIR)"
 
-install: conda $(ES_HOME) $(KIBANA_HOME) $(LOGDIR)
+install: conda $(ES_HOME) $(KIBANA_HOME) $(LS_HOME) $(LS_PS_JDBC) $(LOGDIR)
 	conda install -y \
 	anaconda::postgresql=12.2
-# conda-forge::jq
 
 # interactive shell with environment populated
 bash:
@@ -257,7 +256,7 @@ es-check:
 	curl -X GET "$(ES_URL)/?pretty"
 
 # get the entries in the ElasticSearch index
-es-count:
+es-show:
 	curl  "$(ES_URL)/$(ES_INDEX)/_search?pretty=true"
 
 es-index:
@@ -323,6 +322,7 @@ LS_HOST:=$(HOST)
 LS_PORT:=9600
 LS_FB_PORT:=5044
 LS_DATA:=$(CURDIR)/ls_data
+# the Postgres JDBC plugin to use with Logstash
 LS_PS_JDBC:=$(LS_HOME)/logstash-core/lib/jars/$(PG_JDBC_JAR)
 # --path.settings ; Directory containing logstash.yml file:
 # export LS_SETTINGS_DIR:=$(LS_HOME)/config
@@ -352,6 +352,7 @@ ls-start: $(LS_HOME) $(LS_DATA) $(LS_PS_JDBC)
 
 
 # ~~~~~ Filebeat setup ~~~~~ #
+# not used in this demo but useful for testing
 FB_HOST:=$(HOST)
 FB_CONFIG:=$(CONFIGDIR)/filebeat.yml
 FB_DATA:=$(CURDIR)/fb_data
