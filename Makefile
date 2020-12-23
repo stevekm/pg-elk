@@ -162,6 +162,13 @@ pg-import:
 	($$(shuf -i 100-1000 -n1), '$$(shuf -n1 samples/sampleid.txt)', '$$(shuf -n1 samples/tissue.txt)', '$$(shuf -n1 samples/type.txt)'); \
 	" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
 
+_COV:=300
+_SAMPLE:=Sample1
+_TYPE:=Tumor
+_TISSUE:=Lung
+pg-import-row:
+	echo "INSERT INTO $(PGTABLE)(coverage, sampleid, tissue, type) VALUES ( $(_COV), '$(_SAMPLE)', '$(_TISSUE)', '$(_TYPE)'); " | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
+
 pg-drop:
 	echo "DROP TABLE $(PGTABLE)" | psql -p "$(PGPORT)" -U "$(PGUSER)" -W "$(PGDATABASE)"
 
@@ -215,10 +222,33 @@ es-index:
 es-cluster:
 	curl -XGET '$(ES_URL)/_cluster/state?pretty'
 
+# delete entire index from ElasticSearch
 INDEX:=$(ES_INDEX)
 es-drop:
 	curl -X DELETE "$(ES_URL)/$(INDEX)?pretty"
 
+
+# query example
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html
+SAMPLE:=Sample1
+es-query1:
+	curl -X GET "$(ES_URL)/$(ES_INDEX)/_search?pretty=true" \
+	-H 'Content-Type: application/json' \
+	-d'{ "query": { "simple_query_string": { "fields": [ "sampleid" ], "query": "$(SAMPLE)" } } }'
+
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-range-query.html
+COV_MIN:=250
+COV_MAX:=500
+es-query2:
+	curl -X GET "$(ES_URL)/$(ES_INDEX)/_search?pretty=true" \
+	-H 'Content-Type: application/json' \
+	-d'{ "query": { "range": { "coverage": {"gte": $(COV_MIN), "lte": $(COV_MAX)} } } }'
+
+es-query3:
+	curl -X GET "$(ES_URL)/$(ES_INDEX)/_search?pretty=true" \
+	-H 'Content-Type: application/json' \
+	-d'{ "query": { "bool": { "must": {"match": {"sampleid": "$(SAMPLE)"}}, "filter": { "range": {"coverage": {"gte": $(COV_MIN), "lte": $(COV_MAX)}}} } } }'
 
 # ~~~~~ Kibana setup ~~~~~ #
 # https://www.elastic.co/guide/en/beats/filebeat/current/filebeat-installation-configuration.html#view-data
