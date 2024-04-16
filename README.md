@@ -2,7 +2,7 @@
 
 Methods for connecting a PostgreSQL database to ElasticSearch and Kibana via Logstash
 
-**NOTE**: There is a newer version of this that uses MySQL and Docker Compose instead located here; https://github.com/stevekm/mysql-elk. If you are trying to connect a SQL db to ELK then you might want to review that version as well since its Docker usage is preferable to the conda + binary installation and management methods here. 
+**NOTE**: There is a newer version of this that uses MySQL and Docker Compose instead located here; https://github.com/stevekm/mysql-elk. If you are trying to connect a SQL db to ELK then you might want to review that version as well since its Docker usage is preferable to the conda + binary installation and management methods here. The methods for connecting the SQL db to Logstash are mostly the same in both cases.
 
 # Setup
 
